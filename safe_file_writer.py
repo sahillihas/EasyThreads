@@ -16,5 +16,8 @@ class SafeFileWriter:
             data (str): The data to write to the file.
         """
         with self.lock:
-            with open(self.file_path, 'a') as f:
-                f.write(data + '\n')
+            try:
+                with open(self.file_path, 'a') as f:
+                    f.write(data + '\n')
+            except IOError as e:
+                raise RuntimeError(f"Error writing to file {self.file_path}: {e}")
