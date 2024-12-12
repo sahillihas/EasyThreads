@@ -1,4 +1,4 @@
-# threading_file_writer
+# EasyThread
 
 A Python package that provides easy-to-use threading utilities and a thread-safe mechanism for writing data to files. This package is designed to handle race conditions effectively while writing to files in a multi-threaded environment.
 
@@ -10,10 +10,10 @@ A Python package that provides easy-to-use threading utilities and a thread-safe
   
 ## Installation
 
-To install the `threading_file_writer` package, you can use the following pip command:
+To install the `EasyThread` package, you can use the following pip command:
 
 ```bash
-pip install threading_file_writer
+pip install EasyThread
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ Example Usage
 Below is an example showing how to use the package:
 
 ```bash
-from threading_file_writer import ThreadManager, SafeFileWriter
+from EasyThread import ThreadManager, SafeFileWriter
 
 # Worker function to write messages to a file
 def worker(writer, message):
@@ -53,7 +53,7 @@ This example demonstrates how to create a SafeFileWriter object, add multiple th
 ## File Structure
 
 ```bash
-threading_file_writer/
+EasyThread/
   ├── __init__.py          # Package initialization
   ├── thread_manager.py    # Contains the ThreadManager class
   ├── safe_file_writer.py  # Contains the SafeFileWriter class
