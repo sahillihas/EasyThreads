@@ -2,7 +2,7 @@ import threading
 
 class SafeFileWriter:
     """
-    A thread-safe utility class for writing to files.
+    A thread-safe utility class for writing to files
     """
     def __init__(self, file_path):
         self.file_path = file_path
