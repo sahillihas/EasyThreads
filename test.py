@@ -3,12 +3,16 @@ import logging
 import time
 from queue import PriorityQueue
 from typing import Callable, Any
+from rich.console import Console
+from rich.progress import Progress, BarColumn, TextColumn
 
 # Setting up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
 )
+
+console = Console()
 
 class ThreadManager:
     def __init__(self, max_workers: int = 5):
@@ -21,6 +25,13 @@ class ThreadManager:
         self.max_workers = max_workers
         self.thread_pool = PriorityQueue()
         self.threads = {}
+        self.progress = Progress(
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            console=console,
+            transient=True,
+        )
 
     def add_task(self, name: str, target: Callable, args: tuple = (), kwargs: dict = None, priority: int = 0):
         """
@@ -41,20 +52,24 @@ class ThreadManager:
         self.threads[name] = {
             "thread": thread,
             "priority": priority,
-            "progress": 0,
+            "progress_id": None,
             "failed": False,
         }
         self.thread_pool.put((priority, name))
 
     def _wrapper(self, target: Callable, name: str, *args, **kwargs):
+        task_id = self.threads[name]["progress_id"]
         try:
-            logging.info(f"Thread {name} started.")
-            target(*args, **kwargs)
+            total = kwargs.pop("total", 100)  # Default total progress to 100
+            for i in range(total):
+                time.sleep(0.1)  # Simulate progress
+                self.progress.update(task_id, advance=1)
+                target(*args, **kwargs)
         except Exception as e:
             self.threads[name]["failed"] = True
             logging.error(f"Thread {name} failed: {e}")
         finally:
-            self.threads[name]["progress"] = 100
+            self.progress.update(task_id, completed=100)
             logging.info(f"Thread {name} finished.")
 
     def run(self):
@@ -63,18 +78,21 @@ class ThreadManager:
         """
         active_threads = []
 
-        while not self.thread_pool.empty() or active_threads:
-            # Check and clean finished threads
-            active_threads = [t for t in active_threads if t.is_alive()]
+        with self.progress:
+            while not self.thread_pool.empty() or active_threads:
+                # Check and clean finished threads
+                active_threads = [t for t in active_threads if t.is_alive()]
 
-            # Start new threads if there is capacity
-            while len(active_threads) < self.max_workers and not self.thread_pool.empty():
-                _, name = self.thread_pool.get()
-                thread = self.threads[name]["thread"]
-                thread.start()
-                active_threads.append(thread)
+                # Start new threads if there is capacity
+                while len(active_threads) < self.max_workers and not self.thread_pool.empty():
+                    _, name = self.thread_pool.get()
+                    thread = self.threads[name]["thread"]
+                    progress_id = self.progress.add_task(name, total=100)
+                    self.threads[name]["progress_id"] = progress_id
+                    thread.start()
+                    active_threads.append(thread)
 
-            time.sleep(0.1)  # Prevent busy waiting
+                time.sleep(0.1)  # Prevent busy waiting
 
         logging.info("All threads finished.")
 
@@ -88,7 +106,8 @@ class ThreadManager:
         return {
             name: {
                 "is_alive": thread_info["thread"].is_alive(),
-                "progress": thread_info["progress"],
+                "progress": self.progress.tasks[thread_info["progress_id"]].completed
+                if thread_info["progress_id"] is not None else 0,
                 "failed": thread_info["failed"],
             }
             for name, thread_info in self.threads.items()
@@ -113,7 +132,7 @@ class ThreadManager:
 # Example Usage
 def example_task(name: str, duration: int):
     for i in range(duration):
-        logging.info(f"{name} - Task iteration {i + 1}/{duration}")
+        # logging.info(f"{name} - Task iteration {i + 1}/{duration}")
         time.sleep(1)
 
 if __name__ == "__main__":
