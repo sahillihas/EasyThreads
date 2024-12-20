@@ -5,3 +5,6 @@ This package is designed to handle race conditions effectively while writing to 
 
 ThreadManager - Manages all your threads easily
 SafeWriter - For safely writing in the files without fearing about RACE conditions
+
+
+Suggestions for improvement?
