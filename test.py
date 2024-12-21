@@ -34,12 +34,15 @@ class ThreadManager:
             transient=True,
         )
 
-    def add_task(self, name: str, target: Callable, args: tuple = (), kwargs: dict = None, priority: int = 0):
+    def add_task(self, name: str, target: Callable, args: tuple = (), kwargs: dict = None, priority: int = 0, total: int = 100):
         if name in self.threads:
             logging.warning(f"Thread with name '{name}' already exists. Skipping.")
             return
 
-        thread = threading.Thread(target=self._wrapper, name=name, args=(target, name) + args, kwargs=kwargs or {})
+        kwargs = kwargs or {}
+        kwargs["total"] = total  # Pass total to the task's kwargs
+
+        thread = threading.Thread(target=self._wrapper, name=name, args=(target, name) + args, kwargs=kwargs)
         self.threads[name] = {
             "thread": thread,
             "priority": priority,
@@ -48,10 +51,12 @@ class ThreadManager:
         }
         self.thread_pool.put((priority, name))
 
+
     def _wrapper(self, target: Callable, name: str, *args, **kwargs):
         task_id = self.threads[name]["progress_id"]
+        total = kwargs.pop("total", 100)  # Use the provided total or default to 100
+
         try:
-            total = kwargs.pop("total", 100)
             for _ in range(total):
                 time.sleep(0.1)
                 self.progress.update(task_id, advance=1)
@@ -60,8 +65,9 @@ class ThreadManager:
             self.threads[name]["failed"] = True
             logging.error(f"Thread {name} failed: {e}")
         finally:
-            self.progress.update(task_id, completed=100)
+            self.progress.update(task_id, completed=total)  # Mark the task as completed
             logging.info(f"Thread {name} finished.")
+
 
     def run(self):
         active_threads = []
@@ -106,24 +112,36 @@ class ThreadManager:
                 )
         self.run()
 
-# def example_task(name: str, duration: int):
-#     for i in range(duration):
-#         # logging.info(f"{name} - Task iteration {i + 1}/{duration}")
-#         time.sleep(1)
+    def run_llm_tasks(self, llm_function: Callable, prompts: list, **kwargs):
+        for i, prompt in enumerate(prompts):
+            self.add_task(
+                name=f"LLM-Task-{i+1}",
+                target=llm_function,
+                args=(prompt,),
+                kwargs=kwargs,
+                priority=i
+            )
+        self.run()
 
-# if __name__ == "__main__":
-#     manager = ThreadManager(max_workers=3)
+def example_task(name: str, duration: int):
+    for i in range(duration):
+        logging.info(f"{name} - Task iteration {i + 1}/{duration}")
+        time.sleep(1)
 
-#     for i in range(5):
-#         manager.add_task(
-#             name=f"Task-{i + 1}",
-#             target=example_task,
-#             args=(f"Task-{i + 1}", i + 2),
-#             priority=i
-#         )
+def example_llm_function(prompt: str):
+    time.sleep(30)  # Simulate LLM response time
 
-#     manager.run()
+if __name__ == "__main__":
+    manager = ThreadManager(max_workers=3)
 
-#     manager.retry_failed_tasks()
+    prompts = [
+        "What is the capital of France?",
+        "Explain quantum mechanics in simple terms.",
+        "Write a poem about the sea.",
+        "What are the benefits of machine learning?",
+        "Describe the theory of relativity."
+    ]
 
-#     logging.info(manager.get_status())
+    manager.run_llm_tasks(example_llm_function, prompts)
+
+    logging.info(manager.get_status())
