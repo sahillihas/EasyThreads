@@ -130,6 +130,7 @@ def example_task(name: str, duration: int):
 
 def example_llm_function(prompt: str):
     time.sleep(30)  # Simulate LLM response time
+    #Add LLM call here..
 
 if __name__ == "__main__":
     manager = ThreadManager(max_workers=3)
