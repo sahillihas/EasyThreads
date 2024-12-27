@@ -135,6 +135,7 @@ def example_llm_function(prompt: str):
 if __name__ == "__main__":
     manager = ThreadManager(max_workers=3)
 
+    # Can add more prompts or pass it via external list
     prompts = [
         "What is the capital of France?",
         "Explain quantum mechanics in simple terms.",
