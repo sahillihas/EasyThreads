@@ -1,6 +1,7 @@
 import threading
 from queue import Queue
 
+# Thread Manager
 class ThreadManager:
     """
     A utility class to manage threads and ensure safe execution.
