@@ -15,7 +15,7 @@ class ThreadManager:
 
         Args:
             target (function): The function the thread will execute.
-            args (tuple): Arguments for the target function.
+            args (tuple): Arguments for the target function
         """
         thread = threading.Thread(target=target, args=args)
         self.threads.put(thread)
