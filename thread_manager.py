@@ -1,34 +1,32 @@
 import threading
-from queue import Queue
+from typing import Callable, Tuple, List
 
-# Thread Manager
 class ThreadManager:
     """
     A utility class to manage threads and ensure safe execution.
     """
-    def __init__(self):
-        self.threads = Queue()
 
-    def add_thread(self, target, args=()):
+    def __init__(self):
+        self.threads: List[threading.Thread] = []
+
+    def add_thread(self, target: Callable, args: Tuple = (), name: str = None):
         """
         Add a new thread to the manager.
 
         Args:
-            target (function): The function the thread will execute.
-            args (tuple): Arguments for the target function
+            target (Callable): The function the thread will execute.
+            args (Tuple): Arguments for the target function.
+            name (str, optional): Optional name for the thread.
         """
-        thread = threading.Thread(target=target, args=args)
-        self.threads.put(thread)
+        thread = threading.Thread(target=target, args=args, name=name)
+        self.threads.append(thread)
 
     def start_all(self):
         """Start all managed threads."""
-        while not self.threads.empty():
-            thread = self.threads.get()
+        for thread in self.threads:
             thread.start()
-            self.threads.put(thread)
 
     def join_all(self):
         """Wait for all managed threads to complete."""
-        while not self.threads.empty():
-            thread = self.threads.get()
+        for thread in self.threads:
             thread.join()
