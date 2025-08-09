@@ -1,38 +1,51 @@
 import threading
 import logging
-from typing import Union, List
+from pathlib import Path
+from typing import Union, Sequence
+
 
 class SafeFileWriter:
     """
-    A thread-safe utility class for writing to a file.
+    Thread-safe utility for writing to a file.
+    Can handle strings or sequences of strings.
     """
 
-    def __init__(self, file_path: str, encoding: str = 'utf-8'):
+    def __init__(self, file_path: Union[str, Path], encoding: str = "utf-8"):
         """
-        Initialize the SafeFileWriter.
-
         Args:
-            file_path (str): Path to the file to write.
-            encoding (str): Encoding used to open the file.
+            file_path: Path to the file to write.
+            encoding: Encoding used to open the file.
         """
-        self.file_path = file_path
+        self.file_path = Path(file_path)
         self.encoding = encoding
-        self.lock = threading.Lock()
+        self._lock = threading.Lock()
 
-    def write(self, data: Union[str, List[str]]) -> None:
+    def write(self, data: Union[str, Sequence[str]], add_newline: bool = True) -> None:
         """
         Write data to the file in a thread-safe manner.
 
         Args:
-            data (Union[str, List[str]]): The data to write to the file. Can be a string or list of strings.
+            data: String or sequence of strings to write.
+            add_newline: Whether to append a newline after each entry.
         """
-        with self.lock:
+        with self._lock:
             try:
-                with open(self.file_path, 'a', encoding=self.encoding) as f:
-                    if isinstance(data, list):
-                        for line in data:
-                            f.write(line + '\n')
+                with self.file_path.open("a", encoding=self.encoding) as f:
+                    if isinstance(data, str):
+                        f.write(data + ("\n" if add_newline else ""))
                     else:
-                        f.write(data + '\n')
-            except IOError as e:
-                logging.error(f"Error writing to file {self.file_path}: {e}")
+                        f.write(
+                            "\n".join(data) + ("\n" if add_newline else "")
+                        )
+            except OSError as e:
+                logging.error(
+                    f"Failed to write to file {self.file_path}: {e}",
+                    exc_info=True
+                )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # Nothing to clean up — file is handled per write call
+        return False
