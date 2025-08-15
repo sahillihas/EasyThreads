@@ -213,3 +213,21 @@ class ThreadManager:
             self._log.warning("Threads still alive on exit: %s", leftover)
         # do not suppress exceptions from with-body
         return False
+
+    # ---------- Internal helpers ----------
+
+    def _require(self, name: str) -> ManagedThread:
+        with self._lock:
+            item = self._items.get(name)
+            if item is None:
+                raise KeyError(f"No thread named '{name}'")
+            return item
+
+    def _unique_name(self, base: str) -> str:
+        with self._lock:
+            if base not in self._items:
+                return base
+            i = 2
+            while f"{base}-{i}" in self._items:
+                i += 1
+            return f"{base}-{i}"
